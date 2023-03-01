@@ -1,75 +1,84 @@
 class Dog
- attr_accessor :name, :age, :id
- 
- def  initialize(name:, age:, id:nil)
-@id = id
-@name = name
-@age = age
-   end
-    # create_table
-    def self.create_table
+  attr_accessor :name, :breed, :id
+
+  def initialize(name:, breed:, id: nil)
+      @name = name
+      @breed = breed
+      @id = id
+  end
+
+  def self.create_table
+      sql = <<-SQL
+          CREATE TABLE IF NOT EXISTS dogs(
+              id INTEGER PRIMARY KEY,
+              name Text,
+              breed Text
+          )
+      SQL
+
+      DB[:conn].execute(sql)
+  end
+
+  def self.drop_table
+      sql = <<-SQL
+          DROP TABLE IF EXISTS dogs
+      SQL
+
+      DB[:conn].execute(sql)
+  end
+
+  def save
+      sql = <<-SQL
+          INSERT INTO dogs(name, breed) 
+          VALUES (?, ?)
+      SQL
+
+      DB[:conn].execute(sql, self.name, self.breed)
+
+      self.id = DB[:conn].execute("SELECT last_insert_rowid() FROM dogs")[0][0]
+
+      self
+  end
+
+  def self.create(name:, breed:)
+      self.new(name: name, breed: breed).save
+  end
+
+  def self.new_from_db(row)
+      self.new(id: row[0], name: row[1], breed: row[2])
+  end
+
+  def self.all
+      sql = <<-SQL
+          SELECT * FROM dogs
+      SQL
+
+      DB[:conn].execute(sql).map {|row| self.new_from_db(row) }
+  end
+
+  def self.find_by_name(name)
+      sql = <<-SQL
+        SELECT *
+        FROM dogs
+        WHERE name = ?
+        LIMIT 1
+      SQL
   
+      DB[:conn].execute(sql, name).map do |row|
+        self.new_from_db(row)
+      end.first
+  end
 
-        query= "CREATE TABLE  IF NOT EXISTS students (nid INTEGER PRIMARY KEY AUTOINCREMENT ,name VACHAR (255) NOT NULL, age INTEGER NOT NULL)"
-       
-        DB[:conn] .query(query, self.name, self.age)
-       
-        setup_id
-       
-        end
-       
-      #drop_table
-def self.drop_table
-    query = <<-SQL
-    DROP TABLE dogs
-    SQL
-    DB[:conn].query(query)
-end
-   
-   
-    # creating  a new row  in the database
-  INSERT INTO table_name(column1, column2, column3, etc)
-VALUES (value1, value2, value3, etc)
-
-INSTERT INTO DOGS(id,name, gender) VALUES (1, 'AXEL', 'M')
-
-INSERT INTO dogs(id, name, gender) 
-VALUES 
-    (1, 'AXEL', 'M'),
-    (2, 'Annie', 'F'),
-    (3, 'Ace', 'M'),
-    (4, 'Zelda', 'F'),
-    (5, 'Diesel', 'M'),
-    (6, 'Tilly', 'F'),
-    (7, 'Leroy', 'M'),
-    (8, 'Olivia', 'F');
-
-#new_from_db
-
-def new dog(id, name, age)
-@id = id
-@name = name
-@age = age
-end
-
-#all
-
-class All
-def initialize(dog)
-@dog = dog
-
-end
-
-#find_by_name(name)
-
-def initialize find_by_name(name);
-   @name = name
-
-end
-
-#find(id)
- def initialize find(id)
-    @id = id
-   end
-
+  def self.find(id)
+      sql = <<-SQL
+        SELECT *
+        FROM dogs
+        WHERE id = ?
+        LIMIT 1
+      SQL
+  
+      DB[:conn].execute(sql, id).map do |row|
+        self.new_from_db(row)
+      end.first
+    end
 end
